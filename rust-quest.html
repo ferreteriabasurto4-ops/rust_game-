@@ -1,0 +1,1669 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RUSTQUEST — La Forja del Rustacean</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#1a120c;
+  --bg2:#221710;
+  --panel:#2a1d13;
+  --panel2:#332316;
+  --line:#4a3320;
+  --rust:#f0560f;
+  --molten:#ff8a3d;
+  --gold:#f2b23e;
+  --ink:#f5ead6;
+  --muted:#a08d75;
+  --steel:#8fa3b0;
+  --ok:#8fce6f;
+  --bad:#e0483d;
+  --code-bg:#141009;
+  --disp:'Chakra Petch',sans-serif;
+  --body:'IBM Plex Sans',sans-serif;
+  --mono:'JetBrains Mono',monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  background:var(--bg);
+  background-image:
+    radial-gradient(ellipse 80% 50% at 50% -10%, rgba(240,86,15,.14), transparent),
+    repeating-linear-gradient(90deg, transparent 0 3px, rgba(255,138,61,.012) 3px 4px);
+  color:var(--ink);
+  font-family:var(--body);
+  font-size:16px;
+  line-height:1.65;
+}
+::selection{background:var(--rust);color:#fff}
+
+/* ============ HUD ============ */
+.hud{
+  position:fixed;top:0;left:0;right:0;z-index:100;
+  background:linear-gradient(180deg, rgba(26,18,12,.97), rgba(26,18,12,.88));
+  backdrop-filter:blur(8px);
+  border-bottom:2px solid var(--line);
+}
+.hud-inner{
+  max-width:1180px;margin:0 auto;padding:10px 20px;
+  display:flex;align-items:center;gap:16px;flex-wrap:wrap;
+}
+.brand{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.brand svg{width:30px;height:26px}
+.brand-name{font-family:var(--disp);font-weight:700;font-size:17px;letter-spacing:.12em;color:var(--molten)}
+.brand-name b{color:var(--ink)}
+.brand-sub{font-size:10px;letter-spacing:.22em;color:var(--muted);text-transform:uppercase;display:block;margin-top:-2px}
+.hud-spacer{flex:1}
+.hud-stat{
+  display:flex;align-items:center;gap:6px;font-family:var(--disp);font-weight:600;
+  font-size:14px;padding:5px 10px;background:var(--bg2);border:1px solid var(--line);border-radius:4px;
+}
+.hud-lives{color:var(--bad);letter-spacing:1px}
+.hud-coins{color:var(--gold)}
+.hud-coins::before{content:'⚙';margin-right:2px}
+.hud-btn{
+  font-family:var(--disp);font-weight:600;font-size:13px;letter-spacing:.06em;
+  background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:4px;
+  padding:6px 12px;cursor:pointer;transition:border-color .15s, transform .15s;
+}
+.hud-btn:hover{border-color:var(--rust);transform:translateY(-1px)}
+.hud-btn:active{transform:translateY(0)}
+button:focus-visible, .opt:focus-visible, .blank-in:focus-visible, textarea:focus-visible{outline:2px solid var(--molten);outline-offset:2px}
+
+/* barra de progreso */
+.progress-row{display:flex;align-items:center;gap:10px;padding:0 20px 10px;max-width:1180px;margin:0 auto}
+.progress-track{
+  flex:1;height:14px;background:var(--bg2);border:1px solid var(--line);border-radius:3px;overflow:hidden;position:relative;
+}
+.progress-fill{
+  height:100%;width:0%;background:linear-gradient(90deg,#8a3009,var(--rust),var(--molten));
+  transition:width .8s cubic-bezier(.2,.8,.2,1);position:relative;
+}
+.progress-fill::after{
+  content:'';position:absolute;inset:0;
+  background:repeating-linear-gradient(115deg, transparent 0 8px, rgba(255,255,255,.08) 8px 10px);
+}
+.progress-seg{position:absolute;top:0;bottom:0;width:1px;background:rgba(26,18,12,.85)}
+.progress-pct{font-family:var(--disp);font-weight:700;font-size:13px;color:var(--molten);min-width:38px;text-align:right}
+
+/* ============ RAIL ============ */
+.rail{
+  position:fixed;left:14px;top:130px;z-index:50;display:flex;flex-direction:column;gap:4px;
+}
+.rail-item{
+  display:flex;align-items:center;gap:9px;padding:5px 10px;border-radius:4px;cursor:pointer;
+  color:var(--muted);font-family:var(--disp);font-size:11px;letter-spacing:.08em;text-transform:uppercase;
+  border-left:3px solid transparent;transition:all .2s;background:transparent;
+}
+.rail-item .dot{width:9px;height:9px;border-radius:2px;background:var(--line);transform:rotate(45deg);flex-shrink:0}
+.rail-item.done{color:var(--ink)}
+.rail-item.done .dot{background:var(--rust)}
+.rail-item.current{color:var(--molten);border-left-color:var(--rust);background:rgba(240,86,15,.08)}
+.rail-item.current .dot{background:var(--molten);box-shadow:0 0 8px var(--molten)}
+.rail-item:hover{color:var(--ink)}
+@media(max-width:1180px){.rail{display:none}}
+
+/* ============ LAYOUT ============ */
+main{max-width:760px;margin:0 auto;padding:130px 22px 120px}
+.sector-banner{
+  margin:90px 0 30px;padding:26px 28px;position:relative;
+  background:linear-gradient(135deg,var(--panel),var(--bg2));
+  border:1px solid var(--line);border-radius:6px;overflow:hidden;
+}
+.sector-banner::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:3px;
+  background:linear-gradient(90deg,transparent,var(--rust),transparent);
+}
+.sector-eyebrow{font-family:var(--disp);font-size:12px;font-weight:600;letter-spacing:.3em;color:var(--rust);text-transform:uppercase}
+.sector-title{font-family:var(--disp);font-weight:700;font-size:30px;letter-spacing:.04em;margin-top:4px}
+.sector-sub{color:var(--muted);font-size:14px;margin-top:6px}
+.sector-trophy{
+  margin-top:14px;display:inline-flex;align-items:center;gap:8px;font-size:13px;color:var(--gold);
+  background:rgba(242,178,62,.07);border:1px dashed rgba(242,178,62,.35);padding:6px 12px;border-radius:4px;
+}
+.sector-trophy.won{border-style:solid;background:rgba(242,178,62,.12)}
+
+/* hero */
+.hero{text-align:center;padding:40px 0 10px}
+.hero svg.big-crab{width:110px;height:96px;filter:drop-shadow(0 6px 24px rgba(240,86,15,.35))}
+.hero h1{font-family:var(--disp);font-weight:700;font-size:46px;letter-spacing:.06em;line-height:1.1;margin-top:14px}
+.hero h1 span{color:var(--molten)}
+.hero p{color:var(--muted);max-width:520px;margin:14px auto 0;font-size:16px}
+.hero-rules{
+  margin:26px auto 0;display:flex;gap:12px;flex-wrap:wrap;justify-content:center;
+}
+.rule-chip{
+  font-family:var(--disp);font-size:12px;font-weight:600;letter-spacing:.05em;
+  border:1px solid var(--line);background:var(--bg2);border-radius:4px;padding:7px 12px;color:var(--ink);
+}
+.rule-chip b{color:var(--molten)}
+.scroll-cue{
+  text-align:center;color:var(--muted);font-family:var(--disp);font-size:13px;letter-spacing:.2em;
+  margin-top:50px;animation:bob 2.2s ease-in-out infinite;
+}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(7px)}}
+
+/* ============ LECCIÓN ============ */
+.lesson{
+  margin:70px 0;background:var(--bg2);border:1px solid var(--line);border-radius:8px;overflow:hidden;
+  animation:rise .7s cubic-bezier(.2,.8,.2,1) both;
+}
+@keyframes rise{from{opacity:0;transform:translateY(46px)}to{opacity:1;transform:none}}
+.les-head{padding:22px 28px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,var(--panel2),transparent)}
+.les-eyebrow{font-family:var(--disp);font-size:11px;font-weight:600;letter-spacing:.28em;color:var(--rust);text-transform:uppercase}
+.les-head h2{font-family:var(--disp);font-weight:700;font-size:24px;margin-top:6px;letter-spacing:.02em}
+.les-body{padding:26px 28px}
+.les-body p{margin:0 0 14px;color:var(--ink)}
+.les-body p.note{color:var(--muted);font-size:14.5px;border-left:3px solid var(--line);padding-left:14px}
+.les-body strong{color:var(--molten)}
+.tip{
+  margin:16px 0 4px;padding:12px 16px;background:rgba(240,86,15,.07);border:1px solid rgba(240,86,15,.25);
+  border-radius:5px;font-size:14px;color:var(--ink);
+}
+.tip b{color:var(--molten);font-family:var(--disp);font-size:12px;letter-spacing:.15em;text-transform:uppercase;display:block;margin-bottom:3px}
+code.inl{
+  font-family:var(--mono);font-size:.88em;background:var(--code-bg);color:var(--molten);
+  padding:1px 6px;border-radius:3px;border:1px solid var(--line);white-space:nowrap;
+}
+pre.code{
+  background:var(--code-bg);border:1px solid var(--line);border-left:3px solid var(--rust);
+  border-radius:5px;padding:16px 18px;margin:14px 0;overflow-x:auto;
+  font-family:var(--mono);font-size:13.5px;line-height:1.7;tab-size:4;
+}
+pre.code .k{color:var(--molten)}
+pre.code .s{color:#a3c96a}
+pre.code .c{color:#8a7560;font-style:italic}
+pre.code .n{color:var(--gold)}
+pre.code .m{color:#ffd580}
+pre.code .t{color:#7ec4c9}
+
+/* lección bloqueada */
+.lesson.locked{background:transparent;border:1px dashed var(--line)}
+.lesson.locked .lock-card{padding:44px 28px;text-align:center;color:var(--muted)}
+.lock-icon{font-size:30px;filter:grayscale(.6);opacity:.7}
+.lesson.locked h3{font-family:var(--disp);letter-spacing:.2em;font-size:16px;margin-top:12px;color:var(--muted)}
+.lesson.locked p{font-size:13.5px;margin-top:6px}
+.lesson.locked.next-hint h3{color:var(--ink)}
+.lesson.locked.next-hint .lock-icon{filter:none;opacity:1}
+.lesson.cleared .les-head{position:relative}
+.cleared-badge{
+  position:absolute;top:14px;right:16px;font-family:var(--disp);font-size:11px;font-weight:700;letter-spacing:.1em;
+  color:var(--ok);border:1px solid rgba(143,206,111,.4);background:rgba(143,206,111,.08);
+  padding:4px 10px;border-radius:3px;
+}
+
+/* ============ BOSS ============ */
+.boss-zone{padding:0 28px 28px}
+.boss{
+  background:var(--panel);border:1px solid #5a3a1c;border-radius:8px;overflow:hidden;position:relative;
+  box-shadow:0 10px 40px rgba(0,0,0,.4);
+}
+.boss::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--bad),var(--rust),var(--gold))}
+.boss-head{display:flex;gap:18px;align-items:center;padding:18px 22px;border-bottom:1px solid var(--line);background:rgba(0,0,0,.18)}
+.boss-avatar{width:64px;height:56px;flex-shrink:0;transition:transform .2s}
+.boss.hurt .boss-avatar{animation:hitsh .45s}
+@keyframes hitsh{0%{transform:translateX(0) rotate(0)}25%{transform:translateX(-7px) rotate(-6deg) scale(1.08)}55%{transform:translateX(6px) rotate(5deg)}100%{transform:none}}
+.boss-meta{flex:1;min-width:0}
+.boss-name{font-family:var(--disp);font-weight:700;font-size:17px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink)}
+.boss-taunt{font-size:12.5px;color:var(--muted);font-style:italic;margin-top:2px}
+.boss-hpwrap{margin-top:8px}
+.boss-hp{
+  height:12px;background:#100b07;border:1px solid var(--line);border-radius:3px;overflow:hidden;position:relative;
+}
+.boss-hp-fill{
+  height:100%;background:linear-gradient(90deg,#ff3b2e,#ff7a29);width:100%;
+  transition:width .5s cubic-bezier(.2,.8,.2,1);
+}
+.boss-hp-fill::after{content:'';position:absolute;inset:0;background:repeating-linear-gradient(115deg,transparent 0 6px,rgba(0,0,0,.25) 6px 8px)}
+.boss-hp-text{font-family:var(--disp);font-size:11px;color:var(--bad);letter-spacing:.12em;margin-top:4px}
+.boss-body{padding:20px 22px}
+.boss-step-tag{
+  font-family:var(--disp);font-size:11px;font-weight:600;letter-spacing:.2em;color:var(--gold);text-transform:uppercase;margin-bottom:8px;
+}
+.boss-q{margin-bottom:12px}
+.boss-feedback{min-height:22px;font-size:14px;font-weight:500;margin-top:12px}
+.boss-feedback.good{color:var(--ok)}
+.boss-feedback.evil{color:var(--bad)}
+.boss-feedback.evil::before{content:'⟳ ';}
+.opt{
+  display:block;width:100%;text-align:left;background:var(--bg2);color:var(--ink);
+  border:1px solid var(--line);border-radius:5px;padding:11px 14px;margin:8px 0;cursor:pointer;
+  font-family:var(--body);font-size:14.5px;transition:border-color .15s,background .15s,transform .1s;
+}
+.opt:hover{border-color:var(--rust);background:var(--panel2)}
+.opt:active{transform:scale(.995)}
+.opt .oi{font-family:var(--disp);font-weight:600;margin-right:9px;color:var(--muted)}
+pre.code.boss-code{margin:8px 0 14px}
+/* blanks */
+.blank-in{
+  font-family:var(--mono);font-size:13px;color:var(--molten);background:#241207;
+  border:1px dashed var(--rust);border-radius:3px;padding:1px 6px;min-width:90px;
+  text-align:center;
+}
+.b-code-line{white-space:pre}
+/* write */
+textarea.write-in{
+  width:100%;min-height:110px;resize:vertical;background:var(--code-bg);color:#ffd580;
+  border:1px solid var(--line);border-radius:5px;padding:12px 14px;
+  font-family:var(--mono);font-size:13.5px;line-height:1.6;
+}
+textarea.write-in::placeholder{color:#6b5236}
+/* order */
+.pool,.slot-area{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+.slot-area{min-height:44px;border:1px dashed var(--line);border-radius:5px;padding:10px;background:rgba(0,0,0,.18)}
+.pool .oline,.slot-area .oline{
+  font-family:var(--mono);font-size:12.5px;background:var(--bg2);border:1px solid var(--line);
+  border-radius:4px;padding:7px 11px;cursor:pointer;transition:all .15s;color:var(--ink);
+}
+.pool .oline:hover{border-color:var(--rust)}
+.slot-area .oline{border-color:var(--rust);background:rgba(240,86,15,.1)}
+.slot-area .oline .num{color:var(--gold);font-family:var(--disp);margin-right:8px;font-size:11px}
+.slot-hint{color:var(--muted);font-size:13px;font-style:italic;align-self:center}
+.boss-actions{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap}
+.b-btn{
+  font-family:var(--disp);font-weight:700;font-size:13px;letter-spacing:.08em;text-transform:uppercase;
+  padding:10px 18px;border-radius:4px;cursor:pointer;transition:all .15s;border:1px solid;
+}
+.b-btn.check{background:linear-gradient(180deg,var(--rust),#c93f08);border-color:var(--rust);color:#fff}
+.b-btn.check:hover{background:var(--molten);border-color:var(--molten)}
+.b-btn.aux{background:var(--bg2);border-color:var(--line);color:var(--muted);font-weight:600;font-size:12px}
+.b-btn.aux:hover{border-color:var(--gold);color:var(--gold)}
+.b-btn:disabled{opacity:.4;cursor:not-allowed}
+.boss-reward-line{font-size:13px;color:var(--gold);margin-top:10px}
+.boss-hint-box{
+  margin-top:12px;padding:11px 14px;background:rgba(242,178,62,.07);border:1px dashed rgba(242,178,62,.4);
+  border-radius:5px;font-size:14px;display:none;
+}
+/* boss muerto */
+.boss.dead{border-color:rgba(143,206,111,.35)}
+.boss.dead .boss-hp-fill{background:linear-gradient(90deg,#3a6b2e,var(--ok))}
+.boss.dead .boss-name{color:var(--muted);text-decoration:line-through}
+.boss-dead-msg{
+  text-align:center;padding:22px;font-family:var(--disp);letter-spacing:.1em;color:var(--ok);text-transform:uppercase;font-weight:700;
+}
+.next-btn{
+  display:block;margin:16px auto 0;font-family:var(--disp);font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+  background:transparent;color:var(--molten);border:1px solid var(--rust);border-radius:4px;padding:11px 26px;cursor:pointer;
+  font-size:13px;transition:all .2s;
+}
+.next-btn:hover{background:var(--rust);color:#fff}
+
+/* ============ MODALES ============ */
+.overlay{
+  position:fixed;inset:0;z-index:200;background:rgba(10,6,3,.78);backdrop-filter:blur(4px);
+  display:none;align-items:center;justify-content:center;padding:20px;
+}
+.overlay.open{display:flex}
+.modal{
+  background:var(--bg2);border:1px solid var(--line);border-radius:8px;max-width:520px;width:100%;
+  max-height:85vh;overflow-y:auto;position:relative;
+}
+.modal::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--rust),var(--gold))}
+.modal-head{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--line)}
+.modal-head h3{font-family:var(--disp);font-weight:700;letter-spacing:.1em;text-transform:uppercase;font-size:16px}
+.modal-close{background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;line-height:1}
+.modal-close:hover{color:var(--ink)}
+.modal-body{padding:20px 22px}
+.shop-item,.ach-item{
+  display:flex;gap:14px;align-items:center;padding:14px;border:1px solid var(--line);border-radius:6px;margin-bottom:10px;background:var(--panel);
+}
+.shop-icon{font-size:26px;width:44px;text-align:center;flex-shrink:0}
+.shop-info{flex:1}
+.shop-info h4{font-family:var(--disp);font-size:14px;letter-spacing:.05em}
+.shop-info p{font-size:12.5px;color:var(--muted)}
+.buy-btn{
+  font-family:var(--disp);font-weight:700;font-size:12px;background:var(--bg);color:var(--gold);
+  border:1px solid var(--gold);border-radius:4px;padding:8px 13px;cursor:pointer;white-space:nowrap;
+}
+.buy-btn:hover{background:var(--gold);color:#1a120c}
+.buy-btn:disabled{opacity:.35;cursor:not-allowed}
+.ach-item.locked-ach{opacity:.42}
+.ach-icon{font-size:24px;width:44px;text-align:center;filter:grayscale(1);flex-shrink:0}
+.ach-item:not(.locked-ach) .ach-icon{filter:none}
+.ach-info h4{font-family:var(--disp);font-size:13.5px}
+.ach-info p{font-size:12px;color:var(--muted)}
+.gameover-modal{text-align:center;padding:34px 26px}
+.gameover-modal .go-icon{font-size:52px}
+.gameover-modal h3{font-family:var(--disp);font-size:24px;letter-spacing:.14em;color:var(--bad);margin-top:12px}
+.gameover-modal p{color:var(--muted);font-size:14.5px;margin-top:10px}
+.victory-modal{text-align:center;padding:36px 26px}
+.victory-modal .v-icon{font-size:58px;animation:winpulse 1.6s ease-in-out infinite}
+@keyframes winpulse{0%,100%{transform:scale(1)}50%{transform:scale(1.14)}}
+.victory-modal h3{font-family:var(--disp);font-size:26px;letter-spacing:.12em;color:var(--gold);margin-top:12px}
+.victory-modal p{color:var(--muted);margin-top:10px}
+.victory-stats{display:flex;gap:10px;justify-content:center;margin-top:18px;flex-wrap:wrap}
+.vstat{border:1px solid var(--line);background:var(--panel);border-radius:5px;padding:10px 16px;font-family:var(--disp);font-size:13px}
+.vstat b{display:block;font-size:20px;color:var(--molten)}
+.reset-link{display:block;text-align:center;color:var(--muted);font-size:12px;margin-top:14px;text-decoration:underline;cursor:pointer;background:none;border:none;width:100%}
+.reset-link:hover{color:var(--bad)}
+
+/* toasts */
+.toasts{position:fixed;top:76px;right:18px;z-index:300;display:flex;flex-direction:column;gap:8px;align-items:flex-end}
+.toast{
+  font-family:var(--disp);font-size:13px;font-weight:600;letter-spacing:.04em;
+  background:var(--panel);border:1px solid var(--rust);border-radius:5px;padding:10px 16px;
+  animation:toastin .35s cubic-bezier(.2,.8,.2,1), toastout .4s ease-in 3.4s forwards;
+  box-shadow:0 8px 24px rgba(0,0,0,.5);max-width:320px;
+}
+.toast.gold{border-color:var(--gold);color:var(--gold)}
+.toast.bad{border-color:var(--bad);color:var(--bad)}
+@keyframes toastin{from{opacity:0;transform:translateX(30px)}to{opacity:1;transform:none}}
+@keyframes toastout{to{opacity:0;transform:translateY(-8px)}}
+.shake{animation:shk .4s}
+@keyframes shk{0%,100%{transform:translateX(0)}20%{transform:translateX(-9px)}40%{transform:translateX(8px)}60%{transform:translateX(-6px)}80%{transform:translateX(4px)}}
+footer{text-align:center;color:var(--muted);font-size:12px;padding:40px 20px 60px;border-top:1px solid var(--line);margin-top:80px}
+footer a{color:var(--molten)}
+@media (prefers-reduced-motion: reduce){
+  *{animation:none!important;transition:none!important}
+  html{scroll-behavior:auto}
+}
+@media(max-width:640px){
+  .brand-sub{display:none}
+  .lesson,.sector-banner{margin-left:0;margin-right:0}
+  .hud-inner{padding:8px 12px;gap:8px}
+  .boss-head{padding:14px}
+  .boss-body{padding:14px}
+  .les-body,.les-head,.boss-zone{padding-left:16px;padding-right:16px}
+}
+</style>
+</head>
+<body>
+
+<header class="hud">
+  <div class="hud-inner">
+    <div class="brand">
+      <svg viewBox="0 0 60 52" aria-hidden="true"><ellipse cx="30" cy="30" rx="22" ry="16" fill="#f0560f"/><ellipse cx="10" cy="14" rx="8" ry="6" fill="#f0560f" transform="rotate(-20 10 14)"/><ellipse cx="50" cy="14" rx="8" ry="6" fill="#f0560f" transform="rotate(20 50 14)"/><circle cx="22" cy="26" r="4" fill="#1a120c"/><circle cx="38" cy="26" r="4" fill="#1a120c"/><path d="M14 38 Q30 46 46 38" stroke="#1a120c" stroke-width="2.5" fill="none"/></svg>
+      <div>
+        <span class="brand-name">RUST<b>QUEST</b></span>
+        <span class="brand-sub">La Forja del Rustacean</span>
+      </div>
+    </div>
+    <div class="hud-spacer"></div>
+    <div class="hud-stat hud-lives" id="hudLives" title="Vidas"></div>
+    <div class="hud-stat hud-coins" id="hudCoins" title="Chatarra (monedas)"></div>
+    <button class="hud-btn" id="btnShop">📦 Tienda</button>
+    <button class="hud-btn" id="btnAch">🏆 Mérito</button>
+  </div>
+  <div class="progress-row">
+    <div class="progress-track" id="progressTrack"><div class="progress-fill" id="progressFill"></div></div>
+    <span class="progress-pct" id="progressPct">0%</span>
+  </div>
+</header>
+
+<nav class="rail" id="rail" aria-label="Sectores del curso"></nav>
+<main id="course"></main>
+
+<footer>
+  RUSTQUEST — curso gamificado basado en <a href="https://doc.rust-lang.org/stable/book/ch02-00-guessing-game-tutorial.html" target="_blank" rel="noopener">The Rust Programming Language, Cap. 2: Programming a Guessing Game</a>.<br>
+  Ferris te observa. Siempre.
+</footer>
+
+<div class="toasts" id="toasts"></div>
+
+<!-- Tienda -->
+<div class="overlay" id="ovShop">
+  <div class="modal" role="dialog" aria-modal="true" aria-label="Tienda">
+    <div class="modal-head"><h3>📦 Tienda de Chatarra</h3><button class="modal-close" data-close="ovShop">×</button></div>
+    <div class="modal-body" id="shopBody"></div>
+  </div>
+</div>
+
+<!-- Mérito -->
+<div class="overlay" id="ovAch">
+  <div class="modal" role="dialog" aria-modal="true" aria-label="Mérito">
+    <div class="modal-head"><h3>🏆 Vitrina de Mérito</h3><button class="modal-close" data-close="ovAch">×</button></div>
+    <div class="modal-body" id="achBody"></div>
+    <button class="reset-link" id="btnReset">Reiniciar toda la aventura</button>
+  </div>
+</div>
+
+<!-- Game over -->
+<div class="overlay" id="ovGameover">
+  <div class="modal" role="dialog" aria-modal="true" aria-label="Derrota">
+    <div class="gameover-modal">
+      <div class="go-icon">💀🦀</div>
+      <h3>LA CALDERA SE APAGÓ</h3>
+      <p>El boss te retiró del combate, Rustacean.<br>Tus <b style="color:var(--bad)">3 vidas</b> se restauraron… pero el boss recuperó todo su HP.<br>Lee de nuevo la lección y vuelve con más furia.</p>
+      <button class="next-btn" data-close="ovGameover">Volver a la carga</button>
+    </div>
+  </div>
+</div>
+
+<!-- Victoria -->
+<div class="overlay" id="ovVictory">
+  <div class="modal" role="dialog" aria-modal="true" aria-label="Victoria final">
+    <div class="victory-modal">
+      <div class="v-icon">👑🦀</div>
+      <h3>RUSTACEAN LEGENDARIO</h3>
+      <p>Venciste al Cangrejo Anciano y forjaste el juego de adivinanza completo.<br>Conoces <code class="inl">let</code>, <code class="inl">mut</code>, <code class="inl">match</code>, <code class="inl">Result</code>, crates y loops. El óxido ya corre por tus venas.</p>
+      <div class="victory-stats" id="victoryStats"></div>
+      <p style="margin-top:16px;font-size:13px">Siguiente parada: <a href="https://doc.rust-lang.org/stable/book/ch03-00-common-programming-concepts.html" target="_blank" rel="noopener" style="color:var(--molten)">Capítulo 3 del Rust Book</a></p>
+      <button class="next-btn" data-close="ovVictory">Seguir explorando la forja</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ================================================================
+   RUSTQUEST — La Forja del Rustacean
+   Curso gamificado basado en el Cap. 2 del Rust Book (guessing game)
+   ================================================================ */
+'use strict';
+
+/* ---------- utilidades ---------- */
+const $ = s => document.querySelector(s);
+const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const rescape = s => s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+const rint = (a,b) => Math.floor(Math.random()*(b-a+1))+a;
+const rpick = arr => arr[Math.floor(Math.random()*arr.length)];
+
+/* mini resaltador de Rust */
+function hl(code){
+  const e = esc(code);
+  return e.replace(/(\/\/[^\n]*)|("(?:[^"\\]|\\.)*")|(\b(?:fn|let|mut|use|match|loop|break|continue|if|else|enum|struct|impl|crate|as|move|return)\b)|(\b(?:String|Ordering|Result|Ok|Err|Option|Some|None|u32|i32|u8|bool|Vec|Stdin)\b)|(println!|vec!|write!|panic!|assert!)|(\b\d+\b)/g,
+    (m,c,s,k,t,mc,n)=>{
+      if(c) return '<span class="c">'+c+'</span>';
+      if(s) return '<span class="s">'+s+'</span>';
+      if(k) return '<span class="k">'+k+'</span>';
+      if(t) return '<span class="t">'+t+'</span>';
+      if(mc) return '<span class="m">'+mc+'</span>';
+      if(n) return '<span class="n">'+n+'</span>';
+      return m;
+    });
+}
+const codeBlock = c => '<pre class="code"><code>'+hl(c)+'</code></pre>';
+
+/* ---------- contenido del curso ---------- */
+/* Pasos de boss: pueden ser objetos estáticos o funciones que generan
+   variantes PROCEDURALES (números, nombres y mensajes aleatorios). */
+
+const GRITOS = [['grito','¡A la forja!'],['alarido','¡Por Ferris!'],['proclama','¡Oxidado pero vivo!'],['rugido','¡El compilador no perdona!']];
+
+const MODULES = [
+/* ================= SECTOR 01 ================= */
+{
+  id:'m1', name:'La Forja', sub:'Primeros pasos: funciones, macros y Cargo', icon:'🔥',
+  trophy:{icon:'🔨', name:'Martillo de Iniciado', desc:'Superaste el Sector 01 · La Forja'},
+  lessons:[
+  {
+    id:'l1', title:'Tu primer hechizo: fn main y println!',
+    theory:`
+      <p>Todo programa Rust arranca en una función llamada <code class="inl">main</code>. Se declara con <code class="inl">fn</code>, los paréntesis <code class="inl">()</code> indican que no recibe parámetros, y la llave <code class="inl">{</code> abre su cuerpo:</p>
+      ${codeBlock(`fn main() {
+    println!("Hello, world!");
+}`)}
+      <p>Fíjate en el <strong>signo de exclamación</strong>: <code class="inl">println!</code> <strong>no es una función</strong>, es una <strong>macro</strong>. La macro expande código extra en tiempo de compilación para imprimir texto en pantalla. Sin el <code class="inl">!</code>, Rust lo buscaría como función… y no existe.</p>
+      <p>Para crear y correr el proyecto usamos Cargo, el herrero de Rust:</p>
+      ${codeBlock(`$ cargo new guessing_game   // crea el proyecto
+$ cd guessing_game
+$ cargo run                 // compila Y ejecuta`)}
+      <div class="tip"><b>Depósito de chatarra</b>El punto de entrada de todo ejecutable es <code class="inl">fn main</code>. El <code class="inl">!</code> grita "¡soy una macro!".</div>
+      <p class="note">Vas a construir, lección a lección, el clásico <em>guessing game</em>: la máquina inventa un número del 1 al 100 y tú lo adivinas.</p>
+    `,
+    boss:{
+      name:'El Guardián del Crate', taunt:'¿Crees que sabes distinguir una macro, humano?',
+      reward:20,
+      steps:[
+        {
+          type:'quiz',
+          q:'El Guardián señala el <code class="inl">!</code> de <code class="inl">println!</code> con su pinza. ¿Por qué está ahí?',
+          options:[
+            'Porque println! es una macro, no una función',
+            'Porque es obligatorio en todas las llamadas de Rust',
+            'Porque indica que la función puede fallar',
+            'Es puramente decorativo'
+          ],
+          answer:0,
+          hint:'No es una función: expande código en tiempo de compilación.'
+        },
+        () => {
+          const [fnName,msg] = rpick(GRITOS);
+          return {
+            type:'write',
+            q:'El Guardián exige un hechizo propio. Escribe una función llamada <code class="inl">'+fnName+'</code> que no reciba parámetros y que imprima (con <code class="inl">println!</code>) el mensaje <code class="inl">"'+msg+'"</code>. Solo la función, sin <code class="inl">main</code>.',
+            placeholder:'fn '+fnName+'() {\n    \n}',
+            check:{regex:'^fn\\s+'+fnName+'\\s*\\(\\s*\\)\\s*\\{\\s*println!\\s*\\(\\s*'+rescape('"'+msg+'"')+'\\s*\\)\\s*;?\\s*\\}$', flags:'m'},
+            solution:'fn '+fnName+'() {\n    println!("'+msg+'");\n}',
+            hint:'Estructura: fn nombre() { println!("mensaje"); } — con punto y coma al final del println!'
+          };
+        }
+      ]
+    }
+  },
+  {
+    id:'l2', title:'Las pinzas de cangrejo: placeholders',
+    theory:`
+      <p>Dentro de <code class="inl">println!</code>, las llaves <code class="inl">{}</code> funcionan como <strong>pinzas de cangrejo</strong>: sujetan un valor en su lugar dentro del texto.</p>
+      ${codeBlock(`let x = 5;
+let y = 10;
+println!("x = {x} and y + 2 = {}", y + 2);`)}
+      <p>Hay dos formas de usarlas: si pones el <strong>nombre de la variable dentro</strong> de las llaves, se imprime su valor. Si dejas llaves <strong>vacías</strong>, van agarrando las expresiones que pongas después, separadas por comas y en orden.</p>
+      <p class="note">El código de arriba imprime: <code class="inl">x = 5 and y + 2 = 12</code>. Las pinzas vacías toman la primera expresión de la lista: <code class="inl">y + 2</code>.</p>
+      <div class="tip"><b>Depósito de chatarra</b><code class="inl">{nombre}</code> = imprime la variable. <code class="inl">{}</code> = toma la siguiente expresión de la lista.</div>
+    `,
+    boss:{
+      name:'El Eco Oxidado', taunt:'Repítelo… o muereintentando.',
+      reward:25,
+      steps:[
+        () => {
+          const x = rint(2,9), y = rint(3,12);
+          const correct = 'x = '+x+' and y + 2 = '+(y+2);
+          return {
+            type:'quiz',
+            q:'El Eco te muestra: <code class="inl">let x = '+x+'; let y = '+y+';</code> y luego <code class="inl">println!("x = {x} and y + 2 = {}", y + 2);</code> ¿Qué imprime?',
+            options:[correct, 'x = {x} and y + 2 = {}', 'x = '+x+' and y + 2 = '+y, 'x = '+x+' and y = '+y],
+            answer:0,
+            hint:'La primera pinza es nombrada ({x} → '+x+'). La pinza vacía toma la expresión y + 2 = '+(y+2)+'.'
+          };
+        },
+        {
+          type:'blank',
+          q:'Rellena el hueco para que la pinza vacía tome la expresión correcta:',
+          code:'let x = 5;\nlet y = 10;\nprintln!("x = {x} and y + 2 = {}", ██);',
+          answers:[{alts:['y + 2','y+2']}],
+          hint:'Es la primera (y única) expresión de la lista, después de la coma.'
+        },
+        {
+          type:'quiz',
+          q:'"¿Qué son exactamente las llaves dentro de println!", gruñe el Eco.',
+          options:[
+            'Pinzas de cangrejo: sujetan un valor en su lugar dentro del texto',
+            'Un bucle oculto',
+            'Delimitadores de memoria',
+            'Comillas dobles mejoradas'
+          ],
+          answer:0,
+          hint:'El propio Rust Book las compara con las pinzas de un cangrejo.'
+        }
+      ]
+    }
+  }
+  ]
+},
+/* ================= SECTOR 02 ================= */
+{
+  id:'m2', name:'El Mineral', sub:'Variables, inmutabilidad y shadowing', icon:'⛏️',
+  trophy:{icon:'🪙', name:'Pico de Sombra', desc:'Superaste el Sector 02 · El Mineral'},
+  lessons:[
+  {
+    id:'l3', title:'let: valores que no se mueven',
+    theory:`
+      <p>Con <code class="inl">let</code> creas una variable y le <strong>atas</strong> un valor:</p>
+      ${codeBlock(`let apples = 5;      // inmutable
+let mut bananas = 5; // mutable`)}
+      <p>En Rust las variables son <strong>inmutables por defecto</strong>: una vez que <code class="inl">apples</code> vale 5, vale 5 para siempre. Intentar reasignarla es un <strong>error de compilación</strong>, no un warning. Si de verdad necesitas cambiarla, agregas <code class="inl">mut</code>.</p>
+      <p>Los comentarios empiezan con <code class="inl">//</code> y Rust los ignora por completo:</p>
+      ${codeBlock(`// El compilador es mi sensei
+let cargo = 10; // unidad de carga`)}
+      <div class="tip"><b>Depósito de chatarra</b>Inmutable = no puede cambiar. <code class="inl">mut</code> = mutable. El compilador te defiende de ti mismo.</div>
+    `,
+    boss:{
+      name:'El Gólem de Hierro', taunt:'Yo no cambie en mil años. ¿Tú sí?',
+      reward:25,
+      steps:[
+        {
+          type:'quiz',
+          q:'El Gólem escribe con su puño: <code class="inl">let apples = 5;</code> y luego <code class="inl">apples = 6;</code> ¿Qué dice el compilador?',
+          code:'let apples = 5;\napples = 6;',
+          options:[
+            'Error: la variable es inmutable por defecto',
+            'Nada, apples ahora vale 6',
+            'Solo un warning, compila normal',
+            'Pánico en tiempo de ejecución'
+          ],
+          answer:0,
+          hint:'En Rust el valor por defecto de let es congelado. Necesitarías mut para cambiarlo.'
+        },
+        () => {
+          const n = rint(3,50);
+          return {
+            type:'write',
+            q:'Forja el mineral: declara una variable <strong>inmutable</strong> llamada <code class="inl">carga</code> con el valor <code class="inl">'+n+'</code>. Una sola línea.',
+            placeholder:'let carga = ...;',
+            check:{regex:'^let\\s+carga\\s*=\\s*'+n+'\\s*;?$', flags:'m'},
+            solution:'let carga = '+n+';',
+            hint:'Sin mut (debe ser inmutable). Formato: let carga = '+n+';'
+          };
+        },
+        {
+          type:'quiz',
+          q:'¿Cómo escribes un comentario de una línea en Rust?',
+          options:['//', '#', '--', '/* */ únicamente'],
+          answer:0,
+          hint:'Dos barras, igual que en C o JavaScript.'
+        }
+      ]
+    }
+  },
+  {
+    id:'l4', title:'mut y el shadowing: el doble fantasma',
+    theory:`
+      <p>Para que una variable pueda cambiar usamos <code class="inl">let mut</code>:</p>
+      ${codeBlock(`let mut guess = String::new();`)}
+      <p>Y aquí hay magia: <code class="inl">String::new()</code> es una <strong>función asociada</strong> del tipo <code class="inl">String</code> (el <code class="inl">::</code> la conecta con el tipo). Nos devuelve un String vacío y creciente.</p>
+      <p>Rust también permite el <strong>shadowing</strong>: declarar con <code class="inl">let</code> una nueva variable con <strong>el mismo nombre</strong>. La nueva "tapa" a la vieja, y puede incluso tener <strong>otro tipo</strong>:</p>
+      ${codeBlock(`let guess = "42".to_string();     // String
+let guess: u32 = guess.trim().parse().expect("¡Número!"); // ahora u32`)}
+      <p class="note">Shadowing ≠ mut: <code class="inl">mut</code> cambia el valor de la misma variable; el shadowing crea una variable nueva que reutiliza el nombre (perfecto para convertir tipos).</p>
+      <div class="tip"><b>Depósito de chatarra</b>Shadowing se usa para transformar <code class="inl">String</code> → <code class="inl">u32</code> sin inventar nombres tipo <code class="inl">guess_str</code>.</div>
+    `,
+    boss:{
+      name:'El Doble Fantasma', taunt:'¿Cuál de los dos soy? ¿Importa?',
+      reward:30,
+      steps:[
+        {
+          type:'quiz',
+          q:'Ya tienes un <code class="inl">guess</code> tipo String y quieres reutilizar ese nombre para un <code class="inl">u32</code> convertido. ¿Qué haces?',
+          options:[
+            'Shadowing: let guess: u32 = guess.trim().parse()...',
+            'Usar mut para cambiarle el tipo a la variable',
+            'Imposible, los nombres son únicos para siempre',
+            'Renombrar la vieja a guess_str y crear otra'
+          ],
+          answer:0,
+          hint:'El mismo libro del Rust Book evita guess_str usando shadowing.'
+        },
+        {
+          type:'blank',
+          q:'Invoca un String vacío y mutable (dos huecos):',
+          code:'let ██ guess = String::██();',
+          answers:[{alts:['mut']},{alts:['new']}],
+          hint:'let mut guess = String::new(); — el mut va antes del nombre, y new es la función asociada.'
+        },
+        {
+          type:'quiz',
+          q:'El Fantasma se parte en dos. ¿Cuál es la diferencia entre <code class="inl">mut</code> y shadowing?',
+          options:[
+            'Shadowing crea una variable nueva con el mismo nombre (puede cambiar de tipo); mut permite cambiar el valor de la misma variable',
+            'Son sinónimos, mut es la forma corta',
+            'mut permite cambiar el tipo, shadowing no',
+            'Shadowing solo funciona dentro de main'
+          ],
+          answer:0,
+          hint:'Shadowing = nueva variable, nuevo tipo posible. mut = misma variable, mismo tipo, nuevo valor.'
+        }
+      ]
+    }
+  }
+  ]
+},
+/* ================= SECTOR 03 ================= */
+{
+  id:'m3', name:'La Caldera', sub:'Entrada del usuario, referencias y Result', icon:'🌋',
+  trophy:{icon:'🔥', name:'Corazón de la Caldera', desc:'Superaste el Sector 03 · La Caldera'},
+  lessons:[
+  {
+    id:'l5', title:'use std::io y el susurro del teclado',
+    theory:`
+      <p>Para leer lo que el jugador escribe necesitamos la biblioteca de entrada/salida:</p>
+      ${codeBlock(`use std::io;
+
+fn main() {
+    println!("Please input your guess.");
+    let mut guess = String::new();
+    io::stdin()
+        .read_line(&mut guess)
+        .expect("Failed to read line");
+    println!("You guessed: {guess}");
+}`)}
+      <p><code class="inl">use</code> trae <code class="inl">std::io</code> al alcance. Sin <code class="inl">use</code> tendrías que escribir <code class="inl">std::io::stdin()</code> completo.</p>
+      <p><code class="inl">read_line</code> hace dos cosas: <strong>añade</strong> lo que escribes al String que le pases (¡sin borrarlo!) y devuelve un <code class="inl">Result</code>. Le pasamos el String <strong>por referencia</strong> con <code class="inl">&amp;mut guess</code>: el <code class="inl">&amp;</code> la referencia, y <code class="inl">mut</code> la vuelve mutable porque <strong>las referencias también son inmutables por defecto</strong>.</p>
+      <p class="note">Un método por línea con <code class="inl">.metodo()</code> es costumbre legible en Rust: la cadena larga se parte con saltos de línea.</p>
+      <div class="tip"><b>Depósito de chatarra</b><code class="inl">&amp;mut guess</code> = "puedes escribir en mi String a través de esta referencia".</div>
+    `,
+    boss:{
+      name:'El Susurrador de STDIN', taunt:'Escribe… te escucho… siempre…',
+      reward:30,
+      steps:[
+        {
+          type:'quiz',
+          q:'¿Qué hace exactamente <code class="inl">read_line(&mut guess)</code>?',
+          options:[
+            'Añade lo que escribes al String que le pasas por referencia y devuelve un Result',
+            'Reemplaza el contenido del String y devuelve un número',
+            'Solo lee el teclado, no devuelve nada',
+            'Imprime el prompt y lee a la vez'
+          ],
+          answer:0,
+          hint:'Dos acciones: append al String + Result como valor de retorno.'
+        },
+        {
+          type:'blank',
+          q:'Completa la referencia mutable que exige el Susurrador:',
+          code:'io::stdin()\n    .read_line(██ guess)\n    .expect("Failed to read line");',
+          answers:[{alts:['&mut']}],
+          hint:'Las referencias son inmutables por defecto: hace falta & y mut juntos.'
+        },
+        {
+          type:'quiz',
+          q:'¿Por qué <code class="inl">&amp;mut guess</code> y no solo <code class="inl">&amp;guess</code>?',
+          options:[
+            'Porque las referencias, como las variables, son inmutables por defecto',
+            'Porque &guess no compila nunca',
+            'Porque read_line pide dos argumentos',
+            'Porque guess es global'
+          ],
+          answer:0,
+          hint:'Misma regla que let: sin mut, la referencia no puede modificar el String.'
+        }
+      ]
+    }
+  },
+  {
+    id:'l6', title:'Result y expect: manejar el posible fallo',
+    theory:`
+      <p><code class="inl">read_line</code> devuelve un <code class="inl">Result</code>: un <strong>enum</strong> que solo puede estar en dos estados:</p>
+      ${codeBlock(`enum Result {
+    Ok(valor),   // todo salió bien
+    Err(error),  // algo falló, y dice por qué
+}`)}
+      <p>Si ignoras el <code class="inl">Result</code>, el programa compila… con un <strong>warning</strong>: "unused Result that must be used". Rust te obliga a mirar el posible error de frente.</p>
+      <p>La salida rápida es <code class="inl">.expect("mensaje")</code>: si llega <code class="inl">Ok</code>, te entrega el valor; si llega <code class="inl">Err</code>, el programa <strong>crashea</strong> mostrando tu mensaje:</p>
+      ${codeBlock(`io::stdin().read_line(&mut guess)
+    .expect("Failed to read line");`)}
+      <p class="note">expect es la opción bruta: "si falla, muere". Más adelante (Cap. 9) aprenderás a recuperarte de errores con elegancia.</p>
+      <div class="tip"><b>Depósito de chatarra</b>Result = Ok + Err. expect = "desempaqueta o muere con estilo".</div>
+    `,
+    boss:{
+      name:'El Guardián del Pánico', taunt:'Todo lo que puede fallar… fallará.',
+      reward:35,
+      steps:[
+        {
+          type:'quiz',
+          q:'Nombra los dos variantes (estados) del enum <code class="inl">Result</code>:',
+          options:['Ok y Err', 'Some y None', 'Less y Greater', 'true y false'],
+          answer:0,
+          hint:'Uno trae el valor del éxito; el otro, el motivo del fallo.'
+        },
+        {
+          type:'quiz',
+          q:'Si <code class="inl">read_line</code> devuelve <code class="inl">Err</code>, ¿qué hace <code class="inl">.expect("Fallo al leer")</code>?',
+          options:[
+            'Cráshea el programa mostrando ese mensaje',
+            'Reintenta la lectura automáticamente',
+            'Devuelve un String vacío',
+            'Solo imprime un warning y sigue'
+          ],
+          answer:0,
+          hint:'expect es directo: Ok → valor, Err → pánico con tu mensaje.'
+        },
+        {
+          type:'blank',
+          q:'Sella la línea para que el pánico sea controlado:',
+          code:'let n = io::stdin().read_line(&mut guess)██("Failed to read line");',
+          answers:[{alts:['.expect']}],
+          hint:'Es un método: punto + nombre. "desempaqueta o muere".'
+        }
+      ]
+    }
+  }
+  ]
+},
+/* ================= SECTOR 04 ================= */
+{
+  id:'m4', name:'El Depósito', sub:'Crates, Cargo.toml y aleatoriedad', icon:'📦',
+  trophy:{icon:'🧰', name:'Llave del Depósito', desc:'Superaste el Sector 04 · El Depósito'},
+  lessons:[
+  {
+    id:'l7', title:'Crates y Cargo: el mercado de chatarra',
+    theory:`
+      <p>Un <strong>crate</strong> es una colección de código Rust. Tu proyecto es un crate <em>binario</em> (ejecutable); las bibliotecas de otros son crates de <em>librería</em>. El ecosistema vive en <a href="https://crates.io" target="_blank" rel="noopener" style="color:var(--molten)">crates.io</a>.</p>
+      <p>Para usar una librería, la listas en <code class="inl">Cargo.toml</code>:</p>
+      ${codeBlock(`[dependencies]
+rand = "0.10.1"`)}
+      <p>Ese <code class="inl">"0.10.1"</code> es <strong>SemVer</strong> y en realidad significa <code class="inl">^0.10.1</code>: "cualquier versión ≥ 0.10.1 pero &lt; 0.11.0". La primera vez que compilas, Cargo escribe <code class="inl">Cargo.lock</code> fijando las versiones exactas: así <strong>toda tu vida</strong> (y la de tu equipo) compila con las mismas dependencias.</p>
+      <p class="note">Con <code class="inl">cargo update</code> renuevas dentro de los límites; con <code class="inl">cargo doc --open</code> lees el manual de tus dependencias localmente.</p>
+      <div class="tip"><b>Depósito de chatarra</b>Cargo descarga también las dependencias de tus dependencias. Todo se encaja solo.</div>
+    `,
+    boss:{
+      name:'El Mercader de Crates', taunt:'¿Qué compraras, forastero? Todo tiene un precio.',
+      reward:35,
+      steps:[
+        {
+          type:'quiz',
+          q:'¿Qué es un crate en Rust?',
+          options:[
+            'Una colección de código fuente; binario si es ejecutable, de librería si se usa desde otros programas',
+            'Un contenedor de Docker con Rust dentro',
+            'El archivo ejecutable compilado (.exe)',
+            'Un error del compilador'
+          ],
+          answer:0,
+          hint:'Tu proyecto guessing_game ES un crate binario; rand es uno de librería.'
+        },
+        {
+          type:'quiz',
+          q:'El Mercader pone <code class="inl">rand = "0.10.1"</code> sobre la mesa. ¿Qué versiones acepta?',
+          options:[
+            'Cualquiera ≥ 0.10.1 y < 0.11.0',
+            'Exactamente 0.10.1 y ninguna más',
+            'Cualquier versión 0.10.x o superior, incluso 1.0',
+            'Solo la más nueva de crates.io'
+          ],
+          answer:0,
+          hint:'SemVer: "0.10.1" es atajo de "^0.10.1". El 0.11 puede romper la API.'
+        },
+        {
+          type:'blank',
+          q:'Registra la dependencia en el manifiesto:',
+          code:'[dependencies]\nrand = ██',
+          answers:[{alts:['"0.10.1"']}],
+          hint:'En TOML las cadenas van entre comillas dobles.'
+        }
+      ]
+    }
+  },
+  {
+    id:'l8', title:'rand: el dado del destino',
+    theory:`
+      <p>Rust no trae números aleatorios en la biblioteca estándar… pero el equipo mantiene el crate <code class="inl">rand</code>. Lo traemos al alcance y generamos el número secreto:</p>
+      ${codeBlock(`use rand::prelude::*;
+
+let secret_number = rand::rng().random_range(1..=100);`)}
+      <p><code class="inl">rand::rng()</code> te da un generador sembrado por el sistema operativo; <code class="inl">random_range</code> (del trait <code class="inl">RngExt</code>, en el prelude de rand) sorte dentro del rango.</p>
+      <p>Ojo con el rango: <code class="inl">1..=100</code> es <strong>inclusivo</strong> (1 al 100). El clásico <code class="inl">1..100</code> <strong>excluye</strong> el extremo superior (1 al 99).</p>
+      <p class="note">Cada crate trae su propio prelude con lo más usado: <code class="inl">use rand::prelude::*;</code> es la forma canónica de importarlo.</p>
+      <div class="tip"><b>Depósito de chatarra</b>El <code class="inl">prelude</code> de la std ya viene importado por defecto; los prelude de crates externos, tú los importas con use.</div>
+    `,
+    boss:{
+      name:'El Dado Viviente', taunt:'¿Puedes adivinar mi cara? Giraré para siempre.',
+      reward:40,
+      steps:[
+        {
+          type:'quiz',
+          q:'El Dado rueda: ¿qué diferencia hay entre <code class="inl">random_range(1..=100)</code> y <code class="inl">random_range(1..100)</code>?',
+          options:[
+            'El primero incluye el 100; el segundo llega solo hasta 99',
+            'Son idénticos',
+            'El primero genera decimales',
+            'El segundo incluye el 100 pero no el 1'
+          ],
+          answer:0,
+          hint:'..= es inclusivo en ambos extremos; .. excluye el superior.'
+        },
+        {
+          type:'blank',
+          q:'Trae el prelude del crate a tu alcance:',
+          code:'██ rand::prelude::*;',
+          answers:[{alts:['use']}],
+          hint:'La misma palabra que trae std::io al alcance.'
+        },
+        {
+          type:'quiz',
+          q:'¿Por qué <code class="inl">secret_number</code> sale distinto en cada ejecución?',
+          options:[
+            'Porque el generador se siembra con el sistema operativo y random_range sortea en cada llamada',
+            'Porque las variables en Rust se rebarajan solas',
+            'Porque hay un bug en el compilador',
+            'Porque println! genera números al imprimir'
+          ],
+          answer:0,
+          hint:'rand::rng() toma semilla del SO: cada corrida, una barajada nueva.'
+        }
+      ]
+    }
+  }
+  ]
+},
+/* ================= SECTOR 05 ================= */
+{
+  id:'m5', name:'El Comparador', sub:'cmp, Ordering y el match de tres brazos', icon:'⚖️',
+  trophy:{icon:'🗡️', name:'Espada del Match', desc:'Superaste el Sector 05 · El Comparador'},
+  lessons:[
+  {
+    id:'l9', title:'cmp y Ordering: la balanza oxidada',
+    theory:`
+      <p>Comparar dos valores es un arte de tres resultados. Rust lo modela con el enum <code class="inl">Ordering</code>:</p>
+      ${codeBlock(`use std::cmp::Ordering; // Less | Greater | Equal
+
+match guess.cmp(&secret_number) {
+    Ordering::Less    => println!("Too small!"),
+    Ordering::Greater => println!("Too big!"),
+    Ordering::Equal   => println!("You win!"),
+}`)}
+      <p>El método <code class="inl">cmp</code> se puede llamar sobre cualquier cosa comparable. Recibe una <strong>referencia</strong> al otro valor y devuelve una variante de <code class="inl">Ordering</code>: <code class="inl">Less</code>, <code class="inl">Greater</code> o <code class="inl">Equal</code>.</p>
+      <p>Pero cuidado: si intentas comparar un <code class="inl">String</code> contra un número, el compilador te grita <code class="inl">mismatched types</code> (error E0308). Por eso primero convertimos el texto a número con <code class="inl">parse</code> y shadowing.</p>
+      <p class="note">Gracias a que anotamos el nuevo <code class="inl">guess</code> como <code class="inl">u32</code>, Rust infiere que <code class="inl">secret_number</code> también es <code class="inl">u32</code>: la balanza compara peras con peras.</p>
+      <div class="tip"><b>Depósito de chatarra</b>Comparar tipos distintos ni siquiera compila. La seguridad de tipos es la armadura de Rust.</div>
+    `,
+    boss:{
+      name:'La Balanza Oxidada', taunt:'Todo se compara. Tú incluyes.',
+      reward:40,
+      steps:[
+        () => {
+          const a = rint(1,100), b = rint(1,100);
+          const big = Math.max(a,b), small = Math.min(a,b);
+          return {
+            type:'quiz',
+            q:'La Balanza recibe <code class="inl">guess = '+big+'</code> y <code class="inl">secret_number = '+small+'</code>. ¿Qué devuelve <code class="inl">guess.cmp(&secret_number)</code>?',
+            code:'let guess = '+big+';\nlet secret_number = '+small+';\nmatch guess.cmp(&secret_number) {\n    // ¿qué brazo se ejecuta?\n}',
+            options:['Ordering::Greater','Ordering::Less','Ordering::Equal','Error: mismatched types'],
+            answer:0,
+            hint:big+' > '+small+' → el primero es mayor que el segundo.'
+          };
+        },
+        {
+          type:'quiz',
+          q:'¿Qué devuelve el método <code class="inl">cmp</code>?',
+          options:[
+            'Una variante del enum Ordering: Less, Greater o Equal',
+            'Un booleano',
+            'La diferencia entre los números',
+            'Un String con el resultado'
+          ],
+          answer:0,
+          hint:'Es un enum con exactamente tres estados.'
+        },
+        {
+          type:'blank',
+          q:'Importa el enum de comparación:',
+          code:'use std::██::Ordering;',
+          answers:[{alts:['cmp']}],
+          hint:'Vive en el módulo de comparaciones de la std.'
+        }
+      ]
+    }
+  },
+  {
+    id:'l10', title:'match: el juez de los tres brazos',
+    theory:`
+      <p>Un <code class="inl">match</code> se compone de <strong>brazos</strong>. Cada brazo tiene un <em>patrón</em> y el código que corre si el valor encaja:</p>
+      ${codeBlock(`match guess.cmp(&secret_number) {
+    Ordering::Less    => println!("Too small!"),
+    Ordering::Greater => println!("Too big!"),
+    Ordering::Equal   => { println!("You win!"); break; }
+}`)}
+      <p>Rust examina los brazos <strong>de arriba hacia abajo</strong> y ejecuta el primer patrón que coincida; los demás se ignoran. Y lo mejor: <strong>te obliga a cubrir todos los casos</strong> — si te falta un brazo, no compila.</p>
+      <p>Un brazo puede llevar varias sentencias si lo encierras en llaves, como el <code class="inl">Ordering::Equal</code> que además hace <code class="inl">break</code>.</p>
+      <p class="note">match es el corazón del juego de adivinanza: es el juez que lee la balanza y dicta la sentencia.</p>
+      <div class="tip"><b>Depósito de chatarra</b>Patrón => código. Tantos brazos como estados posibles. Ni uno menos.</div>
+    `,
+    boss:{
+      name:'El Juez de los Tres Brazos', taunt:'Mi veredicto es inapelable.',
+      reward:45,
+      steps:[
+        {
+          type:'quiz',
+          q:'¿De qué dos partes se compone cada brazo de un match?',
+          options:[
+            'Un patrón a coincidir y el código que se ejecuta si encaja',
+            'Una condición y un bucle',
+            'Un tipo y una variable',
+            'Una función y su retorno'
+          ],
+          answer:0,
+          hint:'Se leen así: Ordering::Less => println!(...)'
+        },
+        {
+          type:'blank',
+          q:'Completa el brazo que falta en la sentencia del Juez:',
+          code:'match guess.cmp(&secret_number) {\n    Ordering::Less    => println!("Muy pequeno!"),\n    Ordering::██ => println!("Muy grande!"),\n    Ordering::Equal   => println!("Ganaste!"),\n}',
+          answers:[{alts:['Greater']}],
+          hint:'Tres variantes del enum: Less, Greater, Equal. Aquí falta la del medio.'
+        },
+        {
+          type:'quiz',
+          q:'Cuando un patrón coincide y su brazo se ejecuta, ¿qué hace el match con los brazos restantes?',
+          options:[
+            'Termina: los ignora por completo',
+            'Los evalúa también por seguridad',
+            'Lanza un error si quedan brazos',
+            'Elige el más corto'
+          ],
+          answer:0,
+          hint:'La primera coincidencia gana y el match termina ahí.'
+        },
+        () => {
+          const msg = rpick(['Muy pequeño','Frío, frío','Demasiado bajo','Sube, cangrejo']);
+          return {
+            type:'write',
+            q:'Dicta tu propia sentencia: escribe el <strong>brazo completo</strong> del match para cuando el intento es menor al secreto. Debe empezar con <code class="inl">Ordering::Less</code> e imprimir (con println!) el mensaje <code class="inl">"'+msg+'"</code>. Una sola línea, sin llaves.',
+            placeholder:'Ordering::Less => ...',
+            check:{regex:'^Ordering::Less\\s*=>\\s*println!\\s*\\(\\s*'+rescape('"'+msg+'"')+'\\s*\\)\\s*;?$', flags:'m'},
+            solution:'Ordering::Less => println!("'+msg+'");',
+            hint:'Patrón => println!("'+msg+'"); — la flecha es => (igual y mayor que).'
+          };
+        }
+      ]
+    }
+  }
+  ]
+},
+/* ================= SECTOR 06 ================= */
+{
+  id:'m6', name:'El Núcleo', sub:'Bucles y el ensamblaje del juego final', icon:'🌀',
+  trophy:{icon:'👑', name:'Corona del Cangrejo', desc:'Superaste el Sector 06 y completaste RUSTQUEST'},
+  lessons:[
+  {
+    id:'l11', title:'loop, break y continue: el devorador',
+    theory:`
+      <p>Un solo intento es aburrido. <code class="inl">loop</code> crea un bucle infinito; <code class="inl">break</code> lo rompe; <code class="inl">continue</code> salta directo a la siguiente vuelta:</p>
+      ${codeBlock(`loop {
+    println!("Please input your guess.");
+    let mut guess = String::new();
+    io::stdin().read_line(&mut guess).expect("Failed to read line");
+
+    let guess: u32 = match guess.trim().parse() {
+        Ok(num) => num,
+        Err(_) => continue, // entrada no numérica: se ignora
+    };
+
+    match guess.cmp(&secret_number) {
+        Ordering::Less    => println!("Too small!"),
+        Ordering::Greater => println!("Too big!"),
+        Ordering::Equal   => {
+            println!("You win!");
+            break; // salir del loop al ganar
+        }
+    }
+}`)}
+      <p>Fíjate en el truco maestro: en vez de <code class="inl">expect</code>, ahora el <code class="inl">Result</code> de <code class="inl">parse</code> se maneja con un <code class="inl">match</code>. Si el jugador escribe "foo", el brazo <code class="inl">Err(_)</code> hace <code class="inl">continue</code>: el juego <strong>no crashea, solo ignora</strong> la entrada y pide otra.</p>
+      <p>El guion bajo <code class="inl">_</code> es un patrón comodín: "cualquier Err, no me importa el detalle".</p>
+      <div class="tip"><b>Depósito de chatarra</b>break = puerta de salida. continue = "esta vuelta no cuenta". expect → match: de morir elegante a sobrevivir.</div>
+    `,
+    boss:{
+      name:'El Devorador de Bucles', taunt:'Escribiste infinito. Ahora vívelo.',
+      reward:50,
+      steps:[
+        {
+          type:'quiz',
+          q:'¿Qué hace <code class="inl">break</code> y qué hace <code class="inl">continue</code> dentro de un loop?',
+          options:[
+            'break sale del loop por completo; continue salta a la siguiente vuelta',
+            'break pausa el loop; continue lo reinicia desde cero',
+            'Ambos hacen lo mismo con distinto nombre',
+            'continue sale del loop; break repite la vuelta actual'
+          ],
+          answer:0,
+          hint:'Uno rompe la eternidad, el otro descarta la vuelta.'
+        },
+        {
+          type:'quiz',
+          q:'En el patrón <code class="inl">Err(_) => continue</code>, ¿qué significa el guion bajo?',
+          options:[
+            'Un comodín: atrapa cualquier Err sin importar qué contenga',
+            'El nombre de la variable error',
+            'Multiplicación',
+            'Que el Err está vacío y sin tipo'
+          ],
+          answer:0,
+          hint:'_ = "cualquier cosa". No nos interesa el detalle del error.'
+        },
+        {
+          type:'blank',
+          q:'Termina el manejo elegante del parse (dos huecos):',
+          code:'let guess: u32 = match guess.trim().parse() {\n    Ok(num) => ██,\n    Err(_) => ██,\n};',
+          answers:[{alts:['num']},{alts:['continue']}],
+          hint:'Ok entrega el número; Err descarta la vuelta.'
+        }
+      ]
+    }
+  },
+  {
+    id:'l12', title:'EL CANGREJO ANCIANO: el juego completo',
+    theory:`
+      <p>Llegaste al fondo de la forja. Todos los fragmentos que has recogido — <code class="inl">let</code>, <code class="inl">mut</code>, <code class="inl">use</code>, <code class="inl">Result</code>, <code class="inl">match</code>, <code class="inl">loop</code> y el crate <code class="inl">rand</code> — deben ensamblarse en una sola pieza. Este es el juego completo:</p>
+      ${codeBlock(`use std::cmp::Ordering;
+use std::io;
+use rand::prelude::*;
+
+fn main() {
+    println!("Guess the number!");
+    let secret_number = rand::rng().random_range(1..=100);
+    loop {
+        println!("Please input your guess.");
+        let mut guess = String::new();
+        io::stdin().read_line(&mut guess).expect("Failed to read line");
+        let guess: u32 = match guess.trim().parse() {
+            Ok(num) => num,
+            Err(_) => continue,
+        };
+        println!("You guessed: {guess}");
+        match guess.cmp(&secret_number) {
+            Ordering::Less    => println!("Too small!"),
+            Ordering::Greater => println!("Too big!"),
+            Ordering::Equal   => {
+                println!("You win!");
+                break;
+            }
+        }
+    }
+}`)}
+      <p class="note">El Cangrejo Anciano custodia la versión final. Solo un Rustacean que pueda <strong>reescribir el juego de memoria y de sentido común</strong> pasará. Cinco pruebas. Sin piedad.</p>
+      <div class="tip"><b>Depósito de chatarra</b>Lee dos veces. Respira. El compilador no perdona, pero tú tampoco.</div>
+    `,
+    boss:{
+      name:'EL CANGREJO ANCIANO', taunt:'He visto compilar imperios y arder en warnings. ¿Qué traes tú?',
+      reward:150, final:true,
+      steps:[
+        {
+          type:'order',
+          q:'PRIMERA PRUEBA — El Anciano desordena el corazón del loop. Reconstrúyelo en orden (haz clic en las líneas):',
+          lines:[
+            'println!("Please input your guess.");',
+            'let mut guess = String::new();',
+            'io::stdin().read_line(&mut guess).expect("Failed to read line");',
+            'let guess: u32 = guess.trim().parse().expect("Please type a number!");',
+            'println!("You guessed: {guess}");'
+          ],
+          hint:'Primero el prompt, luego crear el String vacío, leer dentro de él, convertirlo y por último anunciarlo.'
+        },
+        {
+          type:'blank',
+          q:'SEGUNDA PRUEBA — Completa la conversión con shadowing (el String original se llama igual):',
+          code:'let ██: u32 = guess.trim().parse().expect("Escribe un numero!");',
+          answers:[{alts:['guess']}],
+          hint:'El shadowing reutiliza el mismo nombre de la variable String.'
+        },
+        {
+          type:'quiz',
+          q:'TERCERA PRUEBA — ¿Dónde va el <code class="inl">break</code> que termina el juego al acertar?',
+          options:[
+            'En el brazo Ordering::Equal, después de imprimir la victoria',
+            'Al principio del loop, antes de leer el intento',
+            'En el brazo Ordering::Less',
+            'Fuera de la función main'
+          ],
+          answer:0,
+          hint:'Se rompe el bucle exactamente cuando ganas: el brazo del empate.'
+        },
+        {
+          type:'write',
+          q:'CUARTA PRUEBA — De memoria, forjero: escribe la línea completa que crea el <code class="inl">secret_number</code> usando <code class="inl">rand::rng()</code>, <code class="inl">random_range</code> con rango inclusivo 1..=100, atado con <code class="inl">let</code>. Una línea.',
+          placeholder:'let secret_number = ...;',
+          check:{regex:'^let\\s+secret_number\\s*=\\s*rand::rng\\(\\)\\s*\\.random_range\\(\\s*1\\s*\\.\\.=\\s*100\\s*\\)\\s*;?$', flags:'m'},
+          solution:'let secret_number = rand::rng().random_range(1..=100);',
+          hint:'let secret_number = rand::rng().random_range(1..=100); — no olvides el = antes del 100.'
+        },
+        {
+          type:'quiz',
+          q:'QUINTA PRUEBA — El jugador escribe "foo" en la versión final del juego. ¿Qué pasa?',
+          options:[
+            'Nada grave: el match del parse lo atrapa con Err(_) => continue y pide otro intento',
+            'El programa crashea con un pánico',
+            'El programa termina con victoria',
+            'foo se convierte en el número 0'
+          ],
+          answer:0,
+          hint:'Recuerda: reemplazamos expect por match en el parse.'
+        }
+      ]
+    }
+  }
+  ]
+}
+];
+
+const MEDALS = [
+  {id:'first', icon:'🎖️', name:'Primer Crate Abierto', desc:'Superaste tu primera lección'},
+  {id:'flawless', icon:'🛡️', name:'Sin Rasguños', desc:'Venciste a un boss sin perder vidas ni revelar respuestas'},
+  {id:'merchant', icon:'🛒', name:'Comerciante de Chatarra', desc:'Hiciste tu primera compra en la tienda'},
+  {id:'sectors', icon:'🏅', name:'Sembrador de Sectores', desc:'Conseguiste 3 trofeos de sector'},
+  {id:'legend', icon:'🦀', name:'Cangrejo Legendario', desc:'Venciste al Cangrejo Anciano: curso completado'}
+];
+
+/* ---------- estado ---------- */
+const TOTAL = MODULES.reduce((n,m)=>n+m.lessons.length,0); // 12
+const LESSON_META = {}; // id -> {module, index}
+MODULES.forEach((m,mi)=>m.lessons.forEach((l,li)=>LESSON_META[l.id]={mi,li}));
+
+let state;
+const DEFAULT_STATE = {done:{}, lives:3, coins:30, trophies:{}, medals:{}, freeHint:false};
+/* almacenamiento tolerante: si localStorage no existe (file:// raro, sandboxes),
+   cae a un respaldo en memoria para que el juego nunca se rompa */
+const storage = (()=>{
+  try{
+    const s = window.localStorage;
+    s.setItem('__rq_t','1'); s.removeItem('__rq_t');
+    return s;
+  }catch(e){
+    const mem = {};
+    return {getItem:k=>(k in mem?mem[k]:null), setItem:(k,v)=>{mem[k]=String(v);}, removeItem:k=>{delete mem[k];}};
+  }
+})();
+function load(){
+  try{ state = JSON.parse(storage.getItem('rustquest_v1')) || {...DEFAULT_STATE}; }
+  catch(e){ state = {...DEFAULT_STATE}; }
+  for(const k in DEFAULT_STATE) if(!(k in state)) state[k]=DEFAULT_STATE[k];
+}
+const save = ()=>{ try{ storage.setItem('rustquest_v1', JSON.stringify(state)); }catch(e){} };
+
+/* ---------- HUD ---------- */
+const HEART = '❤', DEAD = '♡';
+function renderHUD(){
+  let hearts = '';
+  for(let i=0;i<Math.max(3,state.lives);i++) hearts += i<state.lives ? HEART : DEAD;
+  $('#hudLives').textContent = hearts;
+  $('#hudCoins').textContent = state.coins;
+  const doneN = Object.keys(state.done).length;
+  const pct = Math.round(doneN/TOTAL*100);
+  $('#progressFill').style.width = pct+'%';
+  $('#progressPct').textContent = pct+'%';
+}
+function renderSegments(){
+  const track = $('#progressTrack');
+  track.querySelectorAll('.progress-seg').forEach(s=>s.remove());
+  for(let i=1;i<MODULES.length;i++){
+    const seg = document.createElement('div');
+    seg.className='progress-seg'; seg.style.left=(i/MODULES.length*100)+'%';
+    track.appendChild(seg);
+  }
+}
+function renderRail(){
+  const rail = $('#rail'); rail.innerHTML='';
+  MODULES.forEach((m,i)=>{
+    const doneAll = m.lessons.every(l=>state.done[l.id]);
+    const started = !doneAll && m.lessons.some(l=>state.done[l.id]);
+    const el = document.createElement('div');
+    el.className='rail-item'+(doneAll?' done':'')+(started?' current':'');
+    el.innerHTML = '<span class="dot"></span> S'+String(i+1).padStart(2,'0')+' · '+m.name;
+    el.onclick = ()=> document.getElementById('sec-'+m.id)?.scrollIntoView({behavior:'smooth',block:'start'});
+    rail.appendChild(el);
+  });
+}
+
+/* ---------- toasts ---------- */
+function toast(msg, cls){
+  const t = document.createElement('div');
+  t.className='toast '+(cls||''); t.innerHTML = msg;
+  $('#toasts').appendChild(t);
+  setTimeout(()=>t.remove(), 4000);
+}
+
+/* ---------- medallas ---------- */
+function grantMedal(id){
+  if(state.medals[id]) return;
+  const m = MEDALS.find(x=>x.id===id);
+  state.medals[id]=true; save();
+  toast(m.icon+' Medalla: <b>'+m.name+'</b>','gold');
+}
+
+/* ---------- render del curso ---------- */
+const AVATAR = `<svg viewBox="0 0 60 52" class="boss-avatar" aria-hidden="true"><ellipse cx="30" cy="30" rx="22" ry="16" fill="#f0560f"/><ellipse cx="10" cy="14" rx="8" ry="6" fill="#f0560f" transform="rotate(-20 10 14)"/><ellipse cx="50" cy="14" rx="8" ry="6" fill="#f0560f" transform="rotate(20 50 14)"/><circle cx="22" cy="26" r="4" fill="#1a120c"/><circle cx="38" cy="26" r="4" fill="#1a120c"/><path d="M14 38 Q30 46 46 38" stroke="#1a120c" stroke-width="2.5" fill="none"/></svg>`;
+
+/* combate en memoria por lección */
+const fights = {};
+
+function lessonNumber(lid){ const {mi,li}=LESSON_META[lid]; return mi*10+li+1; }
+
+function renderCourse(){
+  const main = $('#course');
+  main.innerHTML = '<div class="hero">'
+    +'<svg viewBox="0 0 60 52" class="big-crab" aria-hidden="true"><ellipse cx="30" cy="30" rx="22" ry="16" fill="#f0560f"/><ellipse cx="10" cy="14" rx="8" ry="6" fill="#f0560f" transform="rotate(-20 10 14)"/><ellipse cx="50" cy="14" rx="8" ry="6" fill="#f0560f" transform="rotate(20 50 14)"/><circle cx="22" cy="26" r="4" fill="#1a120c"/><circle cx="38" cy="26" r="4" fill="#1a120c"/><path d="M14 38 Q30 46 46 38" stroke="#1a120c" stroke-width="2.5" fill="none"/></svg>'
+    +'<h1>RUST<span>QUEST</span></h1>'
+    +'<p>Un curso de Rust en modo <b>descenso infinito</b> basado en el juego de adivinanza del Rust Book. Cada lección termina en un <b>boss</b>: resuelve sus puzzles para fundir su HP y desbloquear el siguiente sector. Si fallas, pierdes vidas.</p>'
+    +'<div class="hero-rules">'
+    +'<span class="rule-chip">❤️ <b>3 vidas</b></span>'
+    +'<span class="rule-chip">⚙ Chatarra por victoria</span>'
+    +'<span class="rule-chip">💡 Pistas y revelaciones en la tienda</span>'
+    +'<span class="rule-chip">🏆 Trofeos por sector</span>'
+    +'<span class="rule-chip">🎲 Puzzles procedurales</span>'
+    +'</div>'
+    +'<div class="scroll-cue">▼ DESCIENDE Y ENFRENTA AL PRIMER BOSS ▼</div>'
+    +'</div>';
+
+  MODULES.forEach((mod,mi)=>{
+    const banner = document.createElement('div');
+    banner.className='sector-banner'; banner.id='sec-'+mod.id;
+    const won = mod.lessons.every(l=>state.done[l.id]);
+    banner.innerHTML = '<div class="sector-eyebrow">SECTOR '+String(mi+1).padStart(2,'0')+'</div>'
+      +'<div class="sector-title">'+mod.icon+' '+mod.name+'</div>'
+      +'<div class="sector-sub">'+mod.sub+'</div>'
+      +'<div class="sector-trophy'+(won?' won':'')+'">'+(won?'🏆':'🔒')+' Trofeo de sector: <b>'+mod.trophy.name+'</b> — '+mod.trophy.desc+'</div>';
+    main.appendChild(banner);
+
+    mod.lessons.forEach((les,li)=>{
+      main.appendChild(renderLesson(les,mod,mi,li));
+    });
+  });
+  renderRail(); renderHUD(); renderSegments();
+}
+
+/* ¿está desbloqueada la lección? la primera sí; el resto si la anterior está hecha */
+function isUnlocked(lid){
+  const flat = [];
+  MODULES.forEach(m=>m.lessons.forEach(l=>flat.push(l.id)));
+  const i = flat.indexOf(lid);
+  if(i<=0) return true;
+  return !!state.done[flat[i-1]];
+}
+
+function renderLesson(les,mod,mi,li){
+  const art = document.createElement('article');
+  art.className='lesson'; art.id='les-'+les.id;
+  if(state.done[les.id]) art.classList.add('cleared');
+  if(!isUnlocked(les.id)){
+    art.classList.add('locked');
+    const isNext = (()=>{ // la primera bloqueada desbloqueable
+      const flat=[]; MODULES.forEach(m=>m.lessons.forEach(l=>flat.push(l.id)));
+      return flat.indexOf(les.id)===flat.findIndex(f=>!state.done[f]);
+    })();
+    if(isNext) art.classList.add('next-hint');
+    art.innerHTML = '<div class="lock-card"><div class="lock-icon">🔒</div>'
+      +'<h3>'+(isNext?'SECTOR '+String(mi+1).padStart(2,'0')+' · DESCENSO BLOQUEADO':'???')+'</h3>'
+      +'<p>'+(isNext?'Funde el HP del boss de arriba para revelar esta lección.':'Este sector sigue sellado.')+'</p></div>';
+    return art;
+  }
+  art.innerHTML =
+    '<div class="les-head"><div class="les-eyebrow">Lección '+String(li+1).padStart(2,'0')+' · Sector '+String(mi+1).padStart(2,'0')+' — '+mod.name+'</div>'
+    +'<h2>'+les.title+'</h2>'
+    +(state.done[les.id]?'<span class="cleared-badge">✔ SUPERADA</span>':'')
+    +'</div>'
+    +'<div class="les-body">'+les.theory+'</div>'
+    +'<div class="boss-zone" data-boss="'+les.id+'"></div>';
+  mountBoss(art.querySelector('.boss-zone'), les);
+  return art;
+}
+
+/* ---------- bosses ---------- */
+function mountBoss(zone, les, force){
+  const boss = les.boss;
+  const done = !!state.done[les.id];
+  if(done && !force){
+    zone.innerHTML = '<div class="boss dead">'+AVATAR.replace('class="boss-avatar"','class="boss-avatar" style="opacity:.5"')
+      +'<div class="boss-dead-msg">☠ '+boss.name+' — derrotado</div></div>'
+      +'<button class="next-btn" data-revive="'+les.id+'">⚔ Revancha (sin recompensa)</button>';
+    return;
+  }
+  if(!fights[les.id] || fights[les.id].finished || force){
+    /* genera los pasos: los que son funciones se tiran de nuevo → PROCEDURAL */
+    fights[les.id] = {
+      steps: boss.steps.map(s=> typeof s==='function' ? s() : JSON.parse(JSON.stringify(s))),
+      idx:0, hp:0, mistakes:0, revealed:false, hinted:false, orderPick:[]
+    };
+    fights[les.id].hp = fights[les.id].steps.length;
+  }
+  const f = fights[les.id];
+  const el = document.createElement('div');
+  el.className='boss';
+  el.innerHTML = '<div class="boss-head">'+AVATAR
+    +'<div class="boss-meta"><div class="boss-name">'+boss.name+'</div>'
+    +'<div class="boss-taunt">"'+boss.taunt+'"</div>'
+    +'<div class="boss-hpwrap"><div class="boss-hp"><div class="boss-hp-fill"></div></div>'
+    +'<div class="boss-hp-text"></div></div></div></div>'
+    +'<div class="boss-body"></div>';
+  zone.innerHTML=''; zone.appendChild(el);
+  renderStep(les.id, zone);
+}
+
+function renderStep(lid, zoneArg){
+  const les = findLesson(lid);
+  const f = fights[lid];
+  const zone = zoneArg || document.querySelector('[data-boss="'+lid+'"]');
+  const el = zone.querySelector('.boss');
+  const body = el.querySelector('.boss-body');
+  const step = f.steps[f.idx];
+  const total = f.steps.length;
+
+  el.querySelector('.boss-hp-fill').style.width = (f.hp/total*100)+'%';
+  el.querySelector('.boss-hp-text').textContent = 'HP '+f.hp+' / '+total;
+
+  let inner = '<div class="boss-step-tag">Prueba '+(f.idx+1)+' de '+total+'</div><div class="boss-q">'+step.q+'</div>';
+  if(step.code) inner += '<pre class="code boss-code"><code>'+hl(step.code)+'</code></pre>';
+
+  if(step.type==='quiz'){
+    inner += step.options.map((o,i)=>'<button class="opt" data-i="'+i+'"><span class="oi">'+String.fromCharCode(65+i)+'</span>'+o+'</button>').join('');
+  }
+  else if(step.type==='blank'){
+    let code = esc(step.code);
+    step.answers.forEach((a,i)=>{ code = code.replace('██','<input class="blank-in" data-slot="'+i+'" aria-label="hueco '+(i+1)+'">'); });
+    inner += '<pre class="code boss-code"><code class="b-code-line">'+code+'</code></pre>';
+  }
+  else if(step.type==='write'){
+    inner += '<textarea class="write-in" spellcheck="false" placeholder="'+(step.placeholder||'')+'"></textarea>';
+  }
+  else if(step.type==='order'){
+    const pool = step.lines.map((l,i)=>({l, r:Math.random(), i})).sort((a,b)=>a.r-b.r);
+    f.orderPool = pool;
+    inner += '<div class="pool">'+pool.map(p=>'<button class="oline" data-pool="'+p.i+'">'+esc(p.l)+'</button>').join('')+'</div>'
+      +'<div class="slot-area" id="slotArea"><span class="slot-hint">Las líneas que elijas caerán aquí, en orden…</span></div>';
+  }
+
+  inner += '<div class="boss-hint-box" id="hintBox"></div>';
+  inner += '<div class="boss-actions">'
+    +(step.type==='quiz' ? '' : '<button class="b-btn check" data-act="check">Ejecutar ⚙</button>')
+    +'<button class="b-btn aux" data-act="hint">💡 Pista (15⚙)</button>'
+    +'<button class="b-btn aux" data-act="reveal">🔓 Revelar (40⚙)</button>'
+    +'</div>'
+    +'<div class="boss-reward-line">Botín: ⚙ '+les.boss.reward+(les.boss.final?' (¡botín del Anciano!)':'')+' · sin fallos y sin revelar: +15⚙</div>'
+    +'<p class="boss-feedback" id="bossFeedback"></p>';
+  body.innerHTML = inner;
+
+  /* acciones */
+  const fb = body.querySelector('#bossFeedback');
+  const say = (msg,cls)=>{ fb.textContent=''; fb.innerHTML=msg; fb.className='boss-feedback '+(cls||''); };
+  const shakeBoss = ()=>{ el.classList.remove('shake'); el.classList.remove('hurt'); void el.offsetWidth; el.classList.add('shake'); };
+
+  if(step.type==='quiz'){
+    body.querySelectorAll('.opt').forEach(btn=>{
+      btn.onclick = ()=>{
+        if(+btn.dataset.i===step.answer){ damage(lid, say); }
+        else { wrong(lid, say, 'Ese hechizo no era. El boss contraataca.'); }
+      };
+    });
+  }
+  if(step.type==='write'){
+    const ta = body.querySelector('.write-in');
+    ta.addEventListener('keydown', e=>{ if(e.key==='Enter' && e.ctrlKey){ body.querySelector('[data-act=check]').click(); }});
+  }
+  const chkBtn = body.querySelector('[data-act=check]');
+  if(chkBtn) chkBtn.onclick = ()=>{
+    let ok = false;
+    if(step.type==='blank'){
+      const inputs = [...body.querySelectorAll('.blank-in')];
+      ok = step.answers.every((a,i)=>{
+        const v = inputs[i].value.trim();
+        return a.alts.some(alt=>v===alt);
+      });
+    } else if(step.type==='write'){
+      const v = body.querySelector('.write-in').value.replace(/\r/g,'');
+      const norm = v.split('\n').map(l=>l.trim()).join('\n').trim();
+      const re = new RegExp(step.check.regex, step.check.flags||'m');
+      ok = re.test(norm) || re.test(v.trim());
+    } else if(step.type==='order'){
+      ok = f.orderPick.length===step.lines.length && f.orderPick.every((l,i)=>l===step.lines[i]);
+    }
+    if(ok) damage(lid, say);
+    else wrong(lid, say, step.type==='order' ? 'El orden no convence al compilador. Los brazos rechazan tu código.' : 'El compilador gruñe: E0308 mental. Revisa tu código.');
+  };
+  body.querySelector('[data-act=hint]').onclick = ()=>{
+    const free = !!state.freeHint;
+    if(!free && state.coins<15){ say('Chatarra insuficiente (necesitas 15⚙). Gana más batallas.','evil'); return; }
+    if(!f.hinted){
+      if(free){ state.freeHint=false; toast('💡 Turbina consumida: pista gratis.','gold'); }
+      else { state.coins-=15; }
+      f.hinted=true; save(); renderHUD();
+    }
+    const hb = body.querySelector('#hintBox');
+    hb.style.display='block';
+    hb.innerHTML = '💡 <b>Pista:</b> '+step.hint;
+    say('Pista comprada. Ferris asiente lentamente.','');
+  };
+  body.querySelector('[data-act=reveal]').onclick = ()=>{
+    if(state.coins<40){ say('Chatarra insuficiente (necesitas 40⚙).','evil'); return; }
+    if(!f.revealed){ state.coins-=40; f.revealed=true; save(); renderHUD(); }
+    const hb = body.querySelector('#hintBox');
+    hb.style.display='block';
+    let ans='';
+    if(step.type==='quiz') ans = step.options[step.answer];
+    else if(step.type==='blank') ans = step.answers.map(a=>a.alts[0]).join(' , ');
+    else if(step.type==='write') ans = step.solution || step.hint;
+    else if(step.type==='order') ans = step.lines.join('  →  ');
+    hb.innerHTML = '🔓 <b>Respuesta revelada:</b> <code>'+esc(String(ans))+'</code>';
+    say('Respuesta revelada. El Anciano pierde la fe en ti… pero pasa.','');
+  };
+  if(step.type==='order'){
+    const area = body.querySelector('#slotArea');
+    const redraw = ()=>{
+      area.innerHTML = f.orderPick.length
+        ? f.orderPick.map((l,i)=>'<button class="oline" data-un="'+i+'"><span class="num">'+(i+1)+'</span>'+esc(l)+'</button>').join('')
+        : '<span class="slot-hint">Las líneas que elijas caerán aquí, en orden…</span>';
+      area.querySelectorAll('[data-un]').forEach(b=>b.onclick=()=>{ f.orderPick.splice(+b.dataset.un,1); redraw(); syncPool(); });
+    };
+    const syncPool = ()=>{
+      body.querySelectorAll('.pool .oline').forEach(b=>{
+        const line = f.orderPool[+b.dataset.pool].l;
+        const used = f.orderPick.includes(line);
+        b.disabled = used; b.style.opacity = used?.35:1;
+      });
+    };
+    body.querySelectorAll('.pool .oline').forEach(b=>b.onclick=()=>{ f.orderPick.push(f.orderPool[+b.dataset.pool].l); redraw(); syncPool(); });
+    redraw();
+  }
+}
+
+function findLesson(lid){
+  for(const m of MODULES){ const l=m.lessons.find(x=>x.id===lid); if(l) return l; }
+}
+
+/* daño / acierto */
+function damage(lid, say){
+  const f = fights[lid];
+  const el = document.querySelector('[data-boss="'+lid+'"] .boss');
+  f.hp--; f.idx++; f.hinted=false;
+  el.classList.remove('hurt'); void el.offsetWidth; el.classList.add('hurt');
+  if(f.hp<=0){ return victory(lid); }
+  say('⚔ ¡GOLPE CRÍTICO! El boss retrocede… (HP -1)','good');
+  renderStep(lid);
+}
+
+/* fallo */
+function wrong(lid, say, msg){
+  const f = fights[lid];
+  f.mistakes++;
+  state.lives--;
+  save(); renderHUD();
+  const el = document.querySelector('[data-boss="'+lid+'"] .boss');
+  el.classList.add('shake');
+  say('💔 '+msg+' Pierdes 1 vida.','evil');
+  if(state.lives<=0){
+    /* game over: reinicia el boss completo (pasos re-tirados = procedural) */
+    f.finished=true;
+    mountBoss(document.querySelector('[data-boss="'+lid+'"]'), findLesson(lid));
+    state.lives=3; save(); renderHUD();
+    $('#ovGameover').classList.add('open');
+  }
+}
+
+/* victoria del boss */
+function victory(lid){
+  const les = findLesson(lid);
+  const f = fights[lid];
+  const already = !!state.done[lid];
+  const perfect = f.mistakes===0 && !f.revealed;
+  if(!already){
+    state.done[lid]=true;
+    state.coins += les.boss.reward + (perfect?15:0);
+    if(perfect) grantMedal('flawless');
+    grantMedal('first');
+    /* trofeo de módulo */
+    const mod = MODULES[LESSON_META[lid].mi];
+    if(mod.lessons.every(l=>state.done[l.id]) && !state.trophies[mod.id]){
+      state.trophies[mod.id]=true;
+      toast(mod.trophy.icon+' Trofeo de sector: <b>'+mod.trophy.name+'</b>','gold');
+      if(Object.keys(state.trophies).length>=3) grantMedal('sectors');
+    }
+    if(les.boss.final){ grantMedal('legend'); }
+    save();
+  } else {
+    toast('Revancha ganada. El boss ni se inmuta.','');
+  }
+  fights[lid].finished = true;
+  renderCourse();
+  if(!already){
+    toast('⚙ +'+(les.boss.reward+(perfect?15:0))+' chatarra'+(perfect?' (¡sin rasguños!)!':'!'),'gold');
+  }
+  if(les.boss.final){
+    const stats = $('#victoryStats');
+    stats.innerHTML = '<div class="vstat"><b>'+Object.keys(state.done).length+'/'+TOTAL+'</b>lecciones</div>'
+      +'<div class="vstat"><b>'+state.coins+'</b>chatarra</div>'
+      +'<div class="vstat"><b>'+Object.keys(state.trophies).length+'/'+MODULES.length+'</b>trofeos</div>'
+      +'<div class="vstat"><b>'+Object.keys(state.medals).length+'/'+MEDALS.length+'</b>medallas</div>';
+    $('#ovVictory').classList.add('open');
+  }
+  /* scroll hacia la lección recién desbloqueada */
+  const art = document.getElementById('les-'+lid);
+  if(art && !already) setTimeout(()=>{
+    art.querySelector('.boss-zone')?.scrollIntoView({behavior:'smooth',block:'center'});
+  },400);
+}
+
+/* ---------- tienda ---------- */
+const SHOP = [
+  {id:'heart', icon:'❤️', name:'Corazón de Ferris', price:25, desc:'+1 vida (máximo 5 corazones)'},
+  {id:'hintpack', icon:'💡', name:'Turbina de pistas', price:50, desc:'Pista gratis: la siguiente pista de tu boss actual no cuesta chatarra (se marca al comprar)'},
+  {id:'coinpack', icon:'⚙', name:'Lingote de chatarra', price:0, desc:'La chatarra se gana venciendo bosses. Sin atajos, forastero.', disabled:true}
+];
+function openShop(){
+  const b = $('#shopBody');
+  b.innerHTML = '<p style="color:var(--muted);font-size:13px;margin-bottom:14px">Monedas actuales: <b style="color:var(--gold)">'+state.coins+'⚙</b></p>'
+    + SHOP.map(it=>{
+      const disabled = it.disabled || (it.id==='heart' && state.lives>=5);
+      return '<div class="shop-item"><div class="shop-icon">'+it.icon+'</div>'
+        +'<div class="shop-info"><h4>'+it.name+'</h4><p>'+it.desc+'</p></div>'
+        +'<button class="buy-btn" data-buy="'+it.id+'" '+(disabled?'disabled':'')+'>'+(it.price?it.price+'⚙':'—')+'</button></div>';
+    }).join('');
+  b.querySelectorAll('[data-buy]').forEach(btn=>{
+    btn.onclick = ()=>{
+      const id = btn.dataset.buy;
+      if(id==='heart'){
+        if(state.coins<25) return toast('Chatarra insuficiente.','bad');
+        state.coins-=25; state.lives=Math.min(5,state.lives+1);
+        grantMedal('merchant'); save(); renderHUD(); openShop();
+        toast('❤️ Vida restaurada: '+state.lives+' corazones.','gold');
+      }
+      if(id==='hintpack'){
+        if(state.coins<50) return toast('Chatarra insuficiente.','bad');
+        state.coins-=50; state.freeHint=true;
+        grantMedal('merchant'); save(); renderHUD(); openShop();
+        toast('💡 Turbina activada: tu siguiente pista es gratis.','gold');
+      }
+    };
+  });
+  $('#ovShop').classList.add('open');
+}
+
+/* ---------- vitrina ---------- */
+function openAch(){
+  const b = $('#achBody');
+  let html = '<h4 style="font-family:var(--disp);letter-spacing:.1em;color:var(--muted);font-size:12px;text-transform:uppercase;margin-bottom:10px">Trofeos de sector</h4>';
+  html += MODULES.map(m=>{
+    const won = !!state.trophies[m.id];
+    return '<div class="ach-item'+(won?'':' locked-ach')+'"><div class="ach-icon">'+m.trophy.icon+'</div>'
+      +'<div class="ach-info"><h4>'+(won?m.trophy.name:'???')+'</h4><p>'+(won?m.trophy.desc:'Derrota todos los bosses del Sector '+m.name)+'</p></div></div>';
+  }).join('');
+  html += '<h4 style="font-family:var(--disp);letter-spacing:.1em;color:var(--muted);font-size:12px;text-transform:uppercase;margin:18px 0 10px">Medallas</h4>';
+  html += MEDALS.map(m=>{
+    const won = !!state.medals[m.id];
+    return '<div class="ach-item'+(won?'':' locked-ach')+'"><div class="ach-icon">'+m.icon+'</div>'
+      +'<div class="ach-info"><h4>'+m.name+'</h4><p>'+m.desc+'</p></div></div>';
+  }).join('');
+  b.innerHTML = html;
+  $('#ovAch').classList.add('open');
+}
+
+/* ---------- eventos globales ---------- */
+document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>$('#'+b.dataset.close).classList.remove('open'));
+$('#btnShop').onclick = openShop;
+$('#btnAch').onclick = openAch;
+$('#btnReset').onclick = ()=>{
+  if(confirm('¿Seguro? Perderás todo el progreso, trofeos y chatarra. El óxido no perdona.')){
+    storage.removeItem('rustquest_v1');
+    location.reload();
+  }
+};
+document.addEventListener('click', e=>{
+  const rv = e.target.closest('[data-revive]');
+  if(rv){ const lid = rv.dataset.revive; fights[lid]=null; mountBoss(rv.closest('.boss-zone'), findLesson(lid), true); }
+});
+
+/* ---------- arranque ---------- */
+load();
+renderCourse();
+</script>
+</body>
+</html>

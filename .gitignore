@@ -1,0 +1,6 @@
+# Config local de Command Code
+.commandcode/
+
+# Sistema
+Thumbs.db
+.DS_Store
